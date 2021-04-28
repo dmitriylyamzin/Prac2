@@ -1,0 +1,282 @@
+import numpy as np
+from math import*
+
+def validateHCKey (key):
+    for i in key:
+        if (len(i)!=len(key)):
+            return 0
+    potential_key = np.array(key)
+    det = np.linalg.det(potential_key)
+    if det > 0:
+        det+=0.5
+    if det < 0:
+        det -=0.5
+    det = int(det)
+    if det == 0 or gcd (det, 101) > 1:
+        return 0
+    return 1
+
+def encryptSHC (alphabet, key, text):
+    ciphertext = ""
+    c = 0
+    text_part = []
+    for i in text:
+        if i==" ":
+            ciphertext+=" "
+        else:
+            c+=1
+            text_part.append([alphabet.find(i)])
+            if (c%len(key)==0):
+                result = np.dot(key, text_part)
+                for t in result:
+                    for k in t:
+                        ciphertext+= alphabet[k%101]
+                text_part = []
+                
+    print (ciphertext)
+
+def minor(key, a, b):
+    ans = []
+    for i in range(len(key)):
+        ans.append([])
+        for j in range(len(key)):
+                ans[i].append(key[i][j])
+    
+    for i in range (len(key)):
+        ans[i].pop(b)
+    ans.pop(a)
+                
+    return ans
+            
+
+
+def decryptSHC(alphabet, key, text):
+    reverses = [0,1,51,34,76,81,17,29,38,45,91,46,59,70,65,27,19,6,73,16,96,77,23,22,80,97,35,15,83,7,64,88,60,49,3,26,87,71,8,57,48,69,89,47,62,9,11,43,40,33,99,2,68,61,58,90,92,39,54,12,32,53,44,93,30,14,75,98,52,41,13,37,94,18,86,66,4,21,79,78,24,5,85,28,95,82,74,36,31,42,55,10,56,63,72,84,20,25,67,50,100]
+    union_matrix = []
+    transposed_key = np.transpose(key)
+    for i in range(len(transposed_key)):
+        union_matrix.append([])
+        for j in range(len(transposed_key)):
+            det = np.linalg.det(key)
+            minor_det = np.linalg.det(minor(transposed_key,i,j))
+            if det > 0:
+                det+=0.5
+            if det < 0:
+                det -=0.5
+            det = int(det)    
+            if minor_det > 0:
+                minor_det+=0.5
+            if minor_det < 0:
+                minor_det -=0.5
+            minor_det = int(minor_det)               
+            union_matrix[i].append(((-1)**(i+j)*minor_det*reverses[det%101])%101)
+    plaintext = ""
+    c = 0
+    text_part = []
+    for i in text:
+        if i==" ":
+            plaintext += " "
+        else:
+            c+=1
+            text_part.append([alphabet.find(i)])
+            if (c%len(union_matrix)==0):
+                result = np.dot(union_matrix, text_part)
+                for t in result:
+                    for k in t:
+                        plaintext += alphabet[k%101]
+                text_part = []
+                
+    print (plaintext)
+
+def simpleHillCipher(alphabet):
+    text = input("Введите открытый текст или шифртекст: ").lower()
+    validation_flag = 0
+    key = []
+    key_size = int(input("Введите положительное число n - размер квадратной матрицы, которая будет ключом: "))
+    print ("Введите ключ (для шифра Хилла он должен быть квадратной матрицей, определитель которой не равен 0 и не имеет общих делителей со 101).\n При вводе строк матрицы разделяйте числа в каждой строке ровно одним пробелом: ")
+    for i in range (key_size):
+        key.append(list(map(int, input().split())))
+    while validation_flag == 0:
+        validation_flag = validateHCKey(key)
+        if validation_flag == 1:
+            break
+        print("Ключ оказался неверным. Повторите, пожалуйста попытку: ")
+        key = []
+        for i in range (key_size):
+            key.append(list(map(int, input().split())))        
+    action_type = input("Выберите операцию, которую вы хотите осуществить, нажав на соответствующую цифру на клавиатуре:\n 1. Зашифрование\n 2. Расшифрование\n")
+    choose_flag = 0
+    while choose_flag == 0:
+        if action_type == "1":
+            encryptSHC(alphabet, key, text)
+            choose_flag = 1
+        elif action_type == "2":
+            decryptSHC(alphabet, key, text)
+            choose_flag = 1
+        else:
+            action_type = input("Вы должны ввести цифру от 1 до 2 и ничего более:\n 1. Зашифрование\n 2. Расшифрование\n")     
+
+def encryptRHC (alphabet, key1, key2, text):
+    ciphertext = ""
+    c = 0
+    key = []
+    count_of_covered_blocks = 0
+    text_part = []
+    for i in text:
+        if i==" ":
+            ciphertext+=" "
+        else:
+            c+=1
+            text_part.append([alphabet.find(i)])
+            if (c%len(key1) == 0):
+                if count_of_covered_blocks == 0:
+                    key = key1
+                if count_of_covered_blocks == 1:
+                    key = key2
+                if count_of_covered_blocks > 1:
+                    key = key1
+                    key1 = key2
+                    key2 = np.dot(key1, key)
+                    for x in range (len(key2)):
+                        for y in range (len(key2)):
+                            key2[x][y] %= 101                    
+                    key = key2
+                    
+                result = np.dot(key, text_part)
+                for t in result:
+                    for k in t:
+                        ciphertext+= alphabet[k%101]
+                text_part = []
+                count_of_covered_blocks += 1
+                
+    print (ciphertext)
+    
+def decryptRHC (alphabet, key1, key2, text):
+    reverses = [0,1,51,34,76,81,17,29,38,45,91,46,59,70,65,27,19,6,73,16,96,77,23,22,80,97,35,15,83,7,64,88,60,49,3,26,87,71,8,57,48,69,89,47,62,9,11,43,40,33,99,2,68,61,58,90,92,39,54,12,32,53,44,93,30,14,75,98,52,41,13,37,94,18,86,66,4,21,79,78,24,5,85,28,95,82,74,36,31,42,55,10,56,63,72,84,20,25,67,50,100]
+    union_matrix1 = []
+    transposed_key1 = np.transpose(key1)
+    for i in range(len(transposed_key1)):
+        union_matrix1.append([])
+        for j in range(len(transposed_key1)):
+            det1 = np.linalg.det(key1)
+            minor_det1 = np.linalg.det(minor(transposed_key1,i,j))
+            if det1 > 0:
+                det1+=0.5
+            if det1 < 0:
+                det1 -=0.5
+            det1 = int(det1)    
+            if minor_det1 > 0:
+                minor_det1+=0.5
+            if minor_det1 < 0:
+                minor_det1 -=0.5
+            minor_det1 = int(minor_det1)               
+            union_matrix1[i].append(((-1)**(i+j)*minor_det1*reverses[det1%101])%101)
+            
+    union_matrix2 = []
+    transposed_key2 = np.transpose(key2)
+    for i in range(len(transposed_key2)):
+        union_matrix2.append([])
+        for j in range(len(transposed_key2)):
+                det2 = np.linalg.det(key2)
+                minor_det2 = np.linalg.det(minor(transposed_key2,i,j))
+                if det2 > 0:
+                    det2+=0.5
+                if det2 < 0:
+                    det2 -=0.5
+                det2 = int(det2)    
+                if minor_det2 > 0:
+                    minor_det2+=0.5
+                if minor_det2 < 0:
+                    minor_det2 -=0.5
+                minor_det2 = int(minor_det2)               
+                union_matrix2[i].append(((-1)**(i+j)*minor_det2*reverses[det2%101])%101)    
+    plaintext = ""
+    c = 0
+    union_matrix = []
+    count_of_covered_blocks = 0    
+    text_part = []
+    for i in text:
+        if i==" ":
+            plaintext += " "
+        else:
+            c+=1
+            text_part.append([alphabet.find(i)])
+            if (c%len(union_matrix1)==0):
+                if count_of_covered_blocks == 0:
+                    union_matrix = union_matrix1
+                if count_of_covered_blocks == 1:
+                    union_matrix = union_matrix2
+                if count_of_covered_blocks > 1:
+                    union_matrix = union_matrix1
+                    union_matrix1 = union_matrix2
+                    union_matrix2 = np.dot(union_matrix, union_matrix1)
+                    for x in range (len(union_matrix2)):
+                        for y in range (len(union_matrix2)):
+                            union_matrix2[x][y] %= 101
+                    union_matrix = union_matrix2               
+                result = np.dot(union_matrix, text_part)
+                
+                for t in result:
+                    for k in t:
+                        plaintext += alphabet[k%101]
+                text_part = []
+                count_of_covered_blocks += 1
+                
+    print (plaintext)
+            
+def recurrentHillCipher(alphabet):
+    text = input("Введите открытый текст или шифртекст: ").lower()
+    key1 = []
+    key2 = []
+    key_size = int(input("Введите положительное число n - размер квадратных матриц, которые будут ключом: "))
+    print ("Введите ключ для первого блока (для шифра Хилла он должен быть квадратной матрицей, определитель которой не равен 0 и не имеет общих делителей со 101).\n При вводе строк матрицы разделяйте числа в каждой строке ровно одним пробелом: ")
+    for i in range (key_size):
+        key1.append(list(map(int, input().split())))
+    print ("Введите ключ для второго блока (для шифра Хилла он должен быть квадратной матрицей, определитель которой не равен 0 и не имеет общих делителей со 101).\n При вводе строк матрицы разделяйте числа в каждой строке ровно одним пробелом: ")
+    for i in range (key_size):
+        key2.append(list(map(int, input().split())))    
+    validation_flag = 0
+    while validation_flag == 0:
+        validation_flag = validateHCKey(key1)
+        if validation_flag == 1:
+            break
+        print("Ключ оказался неверным. Повторите, пожалуйста попытку: ")
+        key1 = []
+        for i in range (key_size):
+            key1.append(list(map(int, input().split())))    
+    validation_flag = 0
+    while validation_flag == 0:
+        validation_flag = validateHCKey(key2)
+        if validation_flag == 1:
+            break
+        print("Ключ оказался неверным. Повторите, пожалуйста попытку: ")
+        key2 = []
+        for i in range (key_size):
+            key2.append(list(map(int, input().split())))
+    action_type = input("Выберите операцию, которую вы хотите осуществить, нажав на соответствующую цифру на клавиатуре:\n 1. Зашифрование\n 2. Расшифрование\n")
+    choose_flag = 0
+    while choose_flag == 0:
+        if action_type == "1":
+            encryptRHC(alphabet, key1, key2, text)
+            choose_flag = 1
+        elif action_type == "2":
+            decryptRHC(alphabet, key1, key2, text)
+            choose_flag = 1
+        else:
+            action_type = input("Вы должны ввести цифру от 1 до 2 и ничего более:\n 1. Зашифрование\n 2. Расшифрование\n")   
+    
+    
+    
+
+alphabet= "`~!@\"№#$;%:^?&*()_-+{}[]\|/'.,<>1234567890abcdefghijklmnopqrstuvwxyzабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+cipher_type = input("Выберите вид шифра, которым вы хотите воспользоваться, нажав на соответствующую цифру на клавиатуре:\n 1. Простой шифр Хилла\n 2. Рекуррентный шифр Хилла\n")
+choose_flag = 0
+while choose_flag == 0:
+    if cipher_type == "1":
+        simpleHillCipher(alphabet)
+        choose_flag = 1
+    elif cipher_type == "2":
+        recurrentHillCipher(alphabet)
+        choose_flag = 1
+    else:
+        cipher_type = input("Вы должны ввести цифру от 1 до 2 и ничего более:\n 1. Простой шифр Хилла\n 2. Рекуррентный шифр Хилла\n")
